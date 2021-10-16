@@ -22,7 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
+#include "stdint.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +33,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MAX_UART_MSG_SIZE         80
+#define NUM_OF_USED_ADC_CHANNELS  4
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -83,7 +86,9 @@ static void MX_USB_PCD_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-   unsigned char testString[] = "Hello World!\r\n";
+   unsigned char testString[]               = "Hello World!\r\n";
+   char uartBuffer[MAX_UART_MSG_SIZE]       = { 0 };
+   uint32_t adcRaw[4]                       = { 0 };
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -112,15 +117,17 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_UART_Transmit(&huart1, testString, sizeof(testString), 100);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_UART_Transmit(&huart1, testString, sizeof(testString), 100);
-    HAL_Delay(1000);
+    HAL_ADC_Start_DMA(&hadc, adcRaw, 4);
+    snprintf(uartBuffer, MAX_UART_MSG_SIZE, "adc raw values: %lu %lu %lu %lu\r\n", adcRaw[0], adcRaw[1], adcRaw[2], adcRaw[3]);
+    HAL_UART_Transmit(&huart1, (uint8_t*)uartBuffer, sizeof(uartBuffer), 100);
+    HAL_Delay(100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -202,14 +209,14 @@ static void MX_ADC_Init(void)
   hadc.Init.Resolution = ADC_RESOLUTION_12B;
   hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc.Init.ScanConvMode = ADC_SCAN_DIRECTION_FORWARD;
-  hadc.Init.EOCSelection = ADC_EOC_SEQ_CONV;
+  hadc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc.Init.LowPowerAutoWait = DISABLE;
   hadc.Init.LowPowerAutoPowerOff = DISABLE;
-  hadc.Init.ContinuousConvMode = ENABLE;
+  hadc.Init.ContinuousConvMode = DISABLE;
   hadc.Init.DiscontinuousConvMode = DISABLE;
   hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc.Init.DMAContinuousRequests = ENABLE;
+  hadc.Init.DMAContinuousRequests = DISABLE;
   hadc.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   if (HAL_ADC_Init(&hadc) != HAL_OK)
   {
